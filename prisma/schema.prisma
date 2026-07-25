@@ -1,0 +1,98 @@
+// Design artifact for §22 (User Accounts) and §23 (Smart Alerts) — not wired
+// up to a running database in this build. The rest of the app is stateless
+// (everything is derived on the fly from a Team ID), so accounts are a
+// pure additive layer: connect a Postgres instance (Supabase works well —
+// managed auth + Postgres in one), point DATABASE_URL at it, run
+// `prisma migrate dev`, and wire NextAuth (or Supabase Auth) against the
+// User model below. Nothing else in the app needs to change.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  createdAt     DateTime       @default(now())
+  fplTeamId     String?
+  savedLeagues  SavedLeague[]
+  transferPlans TransferPlan[]
+  watchlists    WatchlistItem[]
+  alerts        Alert[]
+  recommendations RecommendationLog[]
+}
+
+model SavedLeague {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  leagueId  String // official FPL mini-league id
+  name      String
+  createdAt DateTime @default(now())
+}
+
+/// A user-authored plan of future transfers across gameweeks (§7 Gameweek Planner).
+model TransferPlan {
+  id        String            @id @default(cuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id])
+  name      String
+  createdAt DateTime          @default(now())
+  entries   TransferPlanEntry[]
+}
+
+model TransferPlanEntry {
+  id             String       @id @default(cuid())
+  planId         String
+  plan           TransferPlan @relation(fields: [planId], references: [id])
+  gw             Int
+  playerOutId    Int
+  playerInId     Int
+  useWildcard    Boolean      @default(false)
+  useFreeHit     Boolean      @default(false)
+}
+
+model WatchlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  playerId  Int
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+/// Every recommendation the app has surfaced to this user, so "why did it
+/// tell me to sell X three weeks ago" is answerable and outcomes can be
+/// back-tested against what actually happened.
+model RecommendationLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  gw         Int
+  kind       String // "transfer" | "captain" | "chip" | "hold-sell"
+  payload    Json
+  createdAt  DateTime @default(now())
+}
+
+model Alert {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  type      AlertType
+  playerId  Int?
+  threshold Json? // e.g. { "probability": 0.8 } for a price alert
+  active    Boolean     @default(true)
+  createdAt DateTime    @default(now())
+}
+
+enum AlertType {
+  PRICE
+  INJURY
+  LINEUP
+  TRANSFER
+  RIVAL
+}
