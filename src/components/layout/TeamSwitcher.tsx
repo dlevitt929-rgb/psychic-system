@@ -2,16 +2,17 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { TEAM_ID_COOKIE } from "@/lib/teamIdCookie";
+import { setTeamIdCookie } from "@/lib/teamIdCookie";
+import { extractTeamId } from "@/lib/utils";
 
 export function TeamSwitcher({ currentTeamId }: { currentTeamId: string }) {
   const router = useRouter();
   const [value, setValue] = useState(currentTeamId);
 
   function apply(id: string) {
-    const clean = id.replace(/\D/g, "");
-    if (!clean) return;
-    document.cookie = `${TEAM_ID_COOKIE}=${clean}; path=/; max-age=${60 * 60 * 24 * 365}`;
+    const teamId = extractTeamId(id);
+    if (!teamId) return;
+    setTeamIdCookie(teamId);
     router.refresh();
   }
 
@@ -27,7 +28,6 @@ export function TeamSwitcher({ currentTeamId }: { currentTeamId: string }) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="FPL Team ID"
-        inputMode="numeric"
         className="w-28 rounded-lg border px-2.5 py-1.5 text-sm mono [border-color:var(--border)] [background:var(--bg-elevated)] focus:outline-none focus:[border-color:var(--accent)]"
       />
       <button

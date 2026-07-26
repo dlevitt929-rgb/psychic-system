@@ -72,6 +72,21 @@ a bad request.
 
 To go back to mock data, delete `.env.local` or set `USE_LIVE_FPL_API=false`.
 
+## Finding your Team ID
+
+The official FPL API has no way to search all managers by name, so both entry
+points accept either the bare numeric ID or a pasted link, parsed with
+`extractTeamId`/`extractLeagueId` in `src/lib/utils.ts`:
+
+- **Know your own Team ID or profile link?** Paste it straight into the
+  import box on the homepage (or the switcher in the nav) — either
+  `1234567` or `https://fantasy.premierleague.com/entry/1234567/...` works.
+- **Only know your mini-league?** Use `/find-team`: paste your league's
+  *Standings* page link (or its numeric ID), see everyone in the league by
+  name, and click yours. This calls `/api/fpl/league/[leagueId]` → the real
+  `leagues-classic/{id}/standings/` endpoint, so it only returns real
+  managers when `USE_LIVE_FPL_API=true`.
+
 ## Architecture
 
 ```
