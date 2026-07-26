@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { generateUserTeam } from "@/lib/data/userTeam";
+import { getUserTeam } from "@/lib/data/userTeam";
 import { getRivalTeams } from "@/lib/data/leagues";
 import { answerQuestion } from "@/lib/ai/assistant";
 import { narrate } from "@/lib/ai/narrate";
@@ -12,8 +12,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Ask a question." }, { status: 400 });
   }
 
-  const team = generateUserTeam(teamId);
-  const rivals = getRivalTeams();
+  const [team, rivals] = await Promise.all([getUserTeam(teamId), getRivalTeams(teamId)]);
   const base = answerQuestion(question, { team, rivals });
   const answer = await narrate(base, question);
 

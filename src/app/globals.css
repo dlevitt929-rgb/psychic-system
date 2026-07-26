@@ -1,23 +1,29 @@
 @import "tailwindcss";
 
+/* Light, card-based theme — clean white surfaces, soft gray borders, and
+   colour used purely for meaning: green = good for you, red = bad for you,
+   club colours identify players. Forced light (no OS dark auto-switch) per
+   product direction; --dark tokens are kept for a possible future toggle. */
 :root {
-  --bg: #f5f6f8;
+  --bg: #fafafa;
   --bg-elevated: #ffffff;
   --surface: #ffffff;
-  --surface-hover: #eef0f4;
-  --border: #dfe2e8;
-  --text: #12141c;
-  --text-muted: #5b6172;
-  --accent: #5b5bf0;
-  --accent-strong: #4238e0;
-  --accent-soft: rgba(91, 91, 240, 0.12);
-  --green: #12a86b;
-  --green-soft: rgba(18, 168, 107, 0.14);
-  --red: #e5484d;
-  --red-soft: rgba(229, 72, 77, 0.14);
-  --amber: #e0a527;
-  --amber-soft: rgba(224, 165, 39, 0.14);
-  --pitch: #0e6b3a;
+  --surface-hover: #f4f4f5;
+  --border: #e5e5e5;
+  --text: #262626;
+  --text-muted: #8e8e8e;
+  --accent: #6d5bf0;
+  --accent-strong: #5843e6;
+  --accent-soft: rgba(109, 91, 240, 0.1);
+  --green: #0d9c53;
+  --green-soft: rgba(13, 156, 83, 0.12);
+  --red: #ed4956;
+  --red-soft: rgba(237, 73, 86, 0.1);
+  --amber: #d9992a;
+  --amber-soft: rgba(217, 153, 42, 0.12);
+  --pitch: #1a8c4f;
+  --story-ring: conic-gradient(from 210deg, #6d5bf0, #ed4956, #d9992a, #0d9c53, #6d5bf0);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 12px rgba(0, 0, 0, 0.04);
   --font-display: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -40,28 +46,7 @@
   --amber: #f3c24f;
   --amber-soft: rgba(243, 194, 79, 0.14);
   --pitch: #0c3d24;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0a0b10;
-    --bg-elevated: #101219;
-    --surface: #12141c;
-    --surface-hover: #181b26;
-    --border: #232636;
-    --text: #eef0f6;
-    --text-muted: #8b90a3;
-    --accent: #7c7cff;
-    --accent-strong: #9d9dff;
-    --accent-soft: rgba(124, 124, 255, 0.14);
-    --green: #2fd889;
-    --green-soft: rgba(47, 216, 137, 0.14);
-    --red: #ff6169;
-    --red-soft: rgba(255, 97, 105, 0.14);
-    --amber: #f3c24f;
-    --amber-soft: rgba(243, 194, 79, 0.14);
-    --pitch: #0c3d24;
-  }
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 12px rgba(0, 0, 0, 0.3);
 }
 
 @theme inline {
@@ -83,7 +68,7 @@
 }
 
 html {
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
 body {
@@ -104,6 +89,18 @@ body {
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background: var(--border);
+  border-radius: 999px;
+}
+
+/* Instagram-style "story ring" — used around a captain's avatar so the pick
+   of the week visually pops without relying on a badge alone. */
+.story-ring {
+  background: var(--story-ring);
+  padding: 2.5px;
+  border-radius: 999px;
+}
+.story-ring > * {
+  border: 2px solid var(--bg-elevated);
   border-radius: 999px;
 }
 

@@ -2,6 +2,8 @@ import { ManagerTeam } from "@/lib/types";
 import { hashString, mulberry32, seededRandomInRange } from "@/lib/data/random";
 import { buildRandomSquad, pickStartingXI, toSquadPicks } from "@/lib/data/squadBuilder";
 import { CURRENT_GW } from "@/lib/data/fixtures";
+import { USE_LIVE_FPL_API } from "@/lib/fpl/adapter";
+import { ensureBootstrapLoaded, fetchLiveUserTeam } from "@/lib/data/live";
 
 const MANAGER_FIRST = ["David", "Alex", "James", "Priya", "Sam", "Chloe", "Ryan", "Fatima", "Noah", "Ellie"];
 const MANAGER_LAST = ["Whitfield", "Osman", "Carter", "Bansal", "Njoku", "Fraser", "Doherty", "Al-Sayed", "Baptiste", "Munro"];
@@ -79,4 +81,23 @@ export function generateUserTeam(teamId: string): ManagerTeam {
     gwHistory,
     transferHistory,
   };
+}
+
+/**
+ * Public entry point every page/route should use. Branches on
+ * USE_LIVE_FPL_API: live data first (falling back to the mock generator if
+ * the real API call fails for any reason, so the app never hard-crashes on
+ * a network hiccup), otherwise the deterministic mock straight away.
+ */
+export async function getUserTeam(teamId: string): Promise<ManagerTeam> {
+  if (USE_LIVE_FPL_API) {
+    try {
+      await ensureBootstrapLoaded();
+      return await fetchLiveUserTeam(teamId);
+    } catch (err) {
+      console.error(`[live-fpl] failed to load team ${teamId}, falling back to mock data:`, err);
+      return generateUserTeam(teamId);
+    }
+  }
+  return generateUserTeam(teamId);
 }

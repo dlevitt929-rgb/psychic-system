@@ -2,6 +2,8 @@ import { ManagerTeam, MiniLeague } from "@/lib/types";
 import { mulberry32, seededRandomInRange } from "@/lib/data/random";
 import { buildRandomSquad, pickStartingXI, toSquadPicks } from "@/lib/data/squadBuilder";
 import { CURRENT_GW } from "@/lib/data/fixtures";
+import { USE_LIVE_FPL_API } from "@/lib/fpl/adapter";
+import { ensureBootstrapLoaded, fetchLiveMiniLeagueMeta, fetchLiveRivals } from "@/lib/data/live";
 
 const RIVAL_NAMES = [
   ["James", "Okonkwo"],
@@ -67,14 +69,46 @@ function buildRivalTeam(seed: number, index: number): ManagerTeam {
 
 let cachedRivals: ManagerTeam[] | null = null;
 
-/** The user's mock mini-league opponents — stand-in for leagues-classic/{id}/standings. */
-export function getRivalTeams(): ManagerTeam[] {
+/** The mock mini-league opponents — stand-in for leagues-classic/{id}/standings. */
+function generateMockRivals(): ManagerTeam[] {
   if (!cachedRivals) {
     cachedRivals = RIVAL_NAMES.map((_, i) => buildRivalTeam(424242 + i * 31, i));
   }
   return cachedRivals;
 }
 
-export function getMiniLeagueMeta(): Pick<MiniLeague, "id" | "name"> {
+function getMockMiniLeagueMeta(): Pick<MiniLeague, "id" | "name"> {
   return { id: 314159, name: "The Office Legends" };
+}
+
+/**
+ * Public entry points. Live mode auto-detects the user's first classic
+ * mini-league from their real entry data (no extra league-ID input needed
+ * for the common case), fetches real standings, and pulls each rival's real
+ * squad — capped at the top few by rank so a huge league doesn't mean
+ * dozens of extra API calls. Falls back to mock data on any failure.
+ */
+export async function getMiniLeagueMeta(teamId: string): Promise<Pick<MiniLeague, "id" | "name">> {
+  if (USE_LIVE_FPL_API) {
+    try {
+      const live = await fetchLiveMiniLeagueMeta(teamId);
+      if (live) return live;
+    } catch (err) {
+      console.error(`[live-fpl] failed to load mini-league for team ${teamId}, falling back to mock data:`, err);
+    }
+  }
+  return getMockMiniLeagueMeta();
+}
+
+export async function getRivalTeams(teamId: string): Promise<ManagerTeam[]> {
+  if (USE_LIVE_FPL_API) {
+    try {
+      await ensureBootstrapLoaded();
+      const rivals = await fetchLiveRivals(teamId);
+      if (rivals.length > 0) return rivals;
+    } catch (err) {
+      console.error(`[live-fpl] failed to load rivals for team ${teamId}, falling back to mock data:`, err);
+    }
+  }
+  return generateMockRivals();
 }

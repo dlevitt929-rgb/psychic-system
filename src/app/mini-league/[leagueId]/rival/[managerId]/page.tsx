@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getActiveTeamId } from "@/lib/session";
-import { generateUserTeam } from "@/lib/data/userTeam";
+import { getUserTeam } from "@/lib/data/userTeam";
 import { getRivalTeams } from "@/lib/data/leagues";
 import { playerById } from "@/lib/data/players";
 import { compareToRival, recommendStrategy } from "@/lib/engine/miniLeague";
@@ -13,8 +13,9 @@ import { fmtMoney, fmtRank } from "@/lib/utils";
 export default async function RivalPage({ params }: { params: Promise<{ leagueId: string; managerId: string }> }) {
   const { managerId } = await params;
   const teamId = await getActiveTeamId();
-  const team = generateUserTeam(teamId);
-  const rival = getRivalTeams().find((r) => r.id === Number(managerId));
+  const team = await getUserTeam(teamId);
+  const rivals = await getRivalTeams(teamId);
+  const rival = rivals.find((r) => r.id === Number(managerId));
   if (!rival) notFound();
 
   const comparison = compareToRival(team, rival);

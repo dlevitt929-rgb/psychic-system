@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getActiveTeamId } from "@/lib/session";
-import { generateUserTeam } from "@/lib/data/userTeam";
+import { getUserTeam } from "@/lib/data/userTeam";
 import { getRivalTeams, getMiniLeagueMeta } from "@/lib/data/leagues";
 import { playerById } from "@/lib/data/players";
 import { bestXIFromSquad } from "@/lib/optimizer/milp";
@@ -17,9 +17,7 @@ import { CURRENT_GW } from "@/lib/data/fixtures";
 
 export default async function DashboardPage() {
   const teamId = await getActiveTeamId();
-  const team = generateUserTeam(teamId);
-  const rivals = getRivalTeams();
-  const league = getMiniLeagueMeta();
+  const [team, rivals, league] = await Promise.all([getUserTeam(teamId), getRivalTeams(teamId), getMiniLeagueMeta(teamId)]);
 
   const squad = team.picks.map((p) => playerById(p.playerId)!).filter(Boolean);
   const { starters, bench, captain, totalXp } = bestXIFromSquad(squad, "next1");

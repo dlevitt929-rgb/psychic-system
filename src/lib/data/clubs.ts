@@ -28,3 +28,8 @@ const RAW: Omit<Club, "id">[] = [
 export const CLUBS: Club[] = RAW.map((c, i) => ({ id: i + 1, ...c }));
 
 export const clubById = (id: number) => CLUBS.find((c) => c.id === id)!;
+
+/** Replaces the contents of CLUBS in place with live data — see lib/data/live.ts. */
+export function replaceClubs(live: Club[]) {
+  CLUBS.splice(0, CLUBS.length, ...live);
+}

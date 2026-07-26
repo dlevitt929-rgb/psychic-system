@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getActiveTeamId } from "@/lib/session";
-import { generateUserTeam } from "@/lib/data/userTeam";
+import { getUserTeam } from "@/lib/data/userTeam";
 import { getRivalTeams, getMiniLeagueMeta } from "@/lib/data/leagues";
 import { recommendStrategy, biggestRivalThreatsAndOpportunities } from "@/lib/engine/miniLeague";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -9,9 +9,8 @@ import { fmtRank } from "@/lib/utils";
 
 export default async function MiniLeaguePage() {
   const teamId = await getActiveTeamId();
-  const team = generateUserTeam(teamId);
-  const rivals = getRivalTeams();
-  const league = getMiniLeagueMeta();
+  const team = await getUserTeam(teamId);
+  const [rivals, league] = await Promise.all([getRivalTeams(teamId), getMiniLeagueMeta(teamId)]);
 
   const standings = [
     { id: team.id, name: `${team.managerName} (You)`, teamName: team.teamName, points: team.overallPoints, isYou: true },

@@ -8,11 +8,13 @@ engine, not a hard-coded example.
 
 ## Status
 
-This build runs entirely on **procedurally generated mock data** (see
-"Why mock data" below) but every engine is fully wired end-to-end: import a
-team ID, get a real optimised squad, real transfer suggestions with expected-
-points deltas, real mini-league comparisons, and an assistant that reasons
-over your actual squad state.
+Live official-FPL-API data is wired up end-to-end (players, fixtures, your
+real team, your real mini-league and rivals). It defaults **off** —
+procedurally generated mock data is the default so the app works instantly
+with zero setup — and turns on with one environment variable. Every engine
+(optimiser, transfer planner, price predictor, mini-league war room,
+assistant) consumes the same typed domain model either way, so nothing else
+changes when you flip the switch.
 
 ## Quick start
 
@@ -22,29 +24,53 @@ npm run dev
 ```
 
 Open http://localhost:3000, click "Try a demo team" (or enter any numeric
-Team ID — team generation is deterministic, so the same ID always produces
-the same squad), and explore the nav: Dashboard, Players, Compare, Fixtures,
-Optimiser, Transfers, Mini-League, Price Watch, Assistant.
+Team ID — in mock mode, team generation is deterministic, so the same ID
+always produces the same squad), and explore the nav: Dashboard, My Team,
+Players, Compare, Fixtures, Optimiser, Transfers, Mini-League, Price Watch,
+Assistant.
 
-## Why mock data
+## Turning on live data
 
-This project was developed in a sandboxed environment whose network policy
-blocks `fantasy.premierleague.com` (confirmed directly — the proxy returns a
-403 for that host). Rather than fake live API responses, every mock data
-file in `src/lib/data/` produces records in **exactly the shape** the real
-FPL API returns (see field-level comments in `src/lib/types.ts`), so swapping
-to live data is a boundary change, not a rewrite:
+Create a file named `.env.local` in the project root containing:
 
-1. Set `USE_LIVE_FPL_API=true` (see `src/lib/fpl/adapter.ts`).
-2. `src/lib/fpl/client.ts` already implements every real endpoint needed
-   (`bootstrap-static`, `fixtures`, `entry/{id}`, `entry/{id}/history`,
-   `entry/{id}/event/{gw}/picks`, `leagues-classic/{id}/standings`).
-3. Point the functions in `src/lib/data/*` at `fplClient` instead of the
-   generators, keeping the same return types.
+```
+USE_LIVE_FPL_API=true
+```
 
-Nothing in `src/lib/prediction`, `src/lib/optimizer`, `src/lib/engine`, or
-any page needs to change — they all consume the typed domain model, not the
-data source.
+Restart `npm run dev`. On the next request, the app fetches the real FPL API
+(no key or sign-up needed — it's a public feed) for:
+
+- All real players, clubs and fixtures (`bootstrap-static`, `fixtures`)
+- Your real team, bank, rank and picks, from the Team ID you enter
+  (`entry/{id}`, `entry/{id}/history`, `entry/{id}/event/{gw}/picks`)
+- Your real mini-league: it auto-detects your **first classic league** from
+  your entry data and pulls real standings + each rival's real squad
+  (capped to the top 7 by rank, to keep large leagues fast)
+
+**This was built and typed against the well-documented public schema, but
+could not be tested end-to-end from the sandbox this was developed in** —
+its network policy blocks `fantasy.premierleague.com` directly (confirmed:
+the request gets a 403). If something looks off once you're running it for
+real, `src/lib/fpl/rawTypes.ts` and `src/lib/fpl/mappers.ts` are the two
+files to check field names against an actual response first. A few specific
+things flagged in code comments as best-effort:
+- **Defensive contribution stats** (the 2024/25+ scoring rule) — the exact
+  field names on live player objects are a best guess; check
+  `approxDefensiveActions90` in `mappers.ts`.
+- **Shots/key passes/big chances** aren't in the public feed at all — these
+  are approximated from the ICT index (threat/creativity), and are display
+  stats only (not inputs to the expected-points model).
+- **Free transfers available** isn't a field FPL exposes directly — it's
+  simulated from your gameweek-by-gameweek transfer history against the
+  saved-transfer cap (5, as of the 2024/25 rules — `simulateFreeTransfers`
+  in `mappers.ts`).
+
+If a live fetch fails for any reason (network blip, rate limit, wrong Team
+ID), every layer falls back to mock data automatically and logs a
+`[live-fpl]` warning to the server console — the app never hard-crashes on
+a bad request.
+
+To go back to mock data, delete `.env.local` or set `USE_LIVE_FPL_API=false`.
 
 ## Architecture
 
@@ -54,8 +80,8 @@ src/
   components/           Presentational + light-interactive UI (charts, pitch view, chat)
   lib/
     types.ts            Domain model (mirrors the real FPL API shapes)
-    data/                DATA LAYER — mock generators today, swappable for lib/fpl/client.ts
-    fpl/                 Real FPL API client (client.ts) + the live/mock switch (adapter.ts)
+    data/                DATA LAYER — mock generators + live.ts (fetches + maps real API into the same arrays)
+    fpl/                 rawTypes.ts (API shapes), mappers.ts (raw->domain), client.ts (fetchers), adapter.ts (the switch)
     prediction/          xp.ts (expected-points model), fdr.ts (custom fixture difficulty)
     optimizer/           milp.ts — real mixed-integer squad optimisation (javascript-lp-solver)
     engine/              transfers.ts, captaincy.ts, price.ts, differentials.ts, miniLeague.ts
@@ -108,20 +134,19 @@ the same approach third-party trackers use.
 
 ## Data sources / APIs (for a live deployment)
 
-| Category | Source |
-|---|---|
-| Players, teams, gameweeks | Official FPL API `bootstrap-static` |
-| Fixtures/results | Official FPL API `fixtures` |
-| Manager team, history, picks, transfers | Official FPL API `entry/*` |
-| Mini-league standings | Official FPL API `leagues-classic/*` |
-| Expected stats (xG/xA), shots, key passes | Not in the official API — would need a stats provider (e.g. Understat/Opta-class feed) |
-| Betting probabilities, predicted lineups | Third-party odds/lineup feeds — not connected in this build |
-| Injury news | Club/media feeds or a service like PhysioRoom — not connected in this build |
+| Category | Source | Status |
+|---|---|---|
+| Players, teams, gameweeks | Official FPL API `bootstrap-static` | Wired (`USE_LIVE_FPL_API=true`) |
+| Fixtures/results | Official FPL API `fixtures` | Wired |
+| Manager team, history, picks | Official FPL API `entry/*` | Wired |
+| Mini-league standings + rivals | Official FPL API `leagues-classic/*` | Wired (auto-detects your first classic league) |
+| xG/xA | Official FPL API (`expected_goals`/`expected_assists`) | Wired |
+| Shots, key passes, big chances | Not in the official API | Approximated from ICT index — see README "Turning on live data" |
+| Betting probabilities, predicted lineups | Third-party odds/lineup feeds | Not connected |
+| Injury news | FPL API's own `status`/`chance_of_playing` field | Wired (no separate injury feed needed for this) |
 
-The app never fabricates live data from these unconnected sources — where a
-category isn't wired up, the UI is honest that it's a heuristic or omitted
-entirely (e.g. injury status uses the FPL API's own `chance_of_playing`
-field once live, not an invented external feed).
+Categories still marked "Not connected" are genuinely absent — the UI never
+fabricates a number for them.
 
 ## Monetisation strategy
 
@@ -141,10 +166,12 @@ field once live, not an invented external feed).
 ## Roadmap
 
 **Shipped in this MVP** (§24, items 1-15): architecture, design system,
-dashboard, team-ID import, squad visualisation, fixture ticker, player
-database, comparison, expected-points model, squad optimiser, transfer
-recommendations, mini-league comparison + war room, price-change interface,
-AI assistant.
+dashboard, a combined "My Team" squad + suggested-transfers view, team-ID
+import, squad visualisation, fixture ticker, player database, comparison,
+expected-points model, squad optimiser, transfer recommendations,
+mini-league comparison + war room, price-change interface, AI assistant —
+plus live official-FPL-API data as an opt-in switch (see "Turning on live
+data" above).
 
 **Deliberately deferred** (needs infrastructure or data feeds beyond this
 build):

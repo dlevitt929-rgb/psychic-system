@@ -147,3 +147,8 @@ export const PLAYERS: Player[] = disambiguateNames(generateAllPlayers());
 export const playerById = (id: number) => PLAYERS.find((p) => p.id === id);
 export const playersByClub = (clubId: number) => PLAYERS.filter((p) => p.clubId === clubId);
 export const playersByPosition = (position: Position) => PLAYERS.filter((p) => p.position === position);
+
+/** Replaces the contents of PLAYERS in place with live data — see lib/data/live.ts. */
+export function replacePlayers(live: Player[]) {
+  PLAYERS.splice(0, PLAYERS.length, ...live);
+}

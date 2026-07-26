@@ -2,13 +2,23 @@ import { Player } from "@/lib/types";
 import { ClubBadge } from "@/components/ui/ClubBadge";
 import { cn } from "@/lib/utils";
 
-function PlayerToken({ player, isCaptain, isVice, xp }: { player: Player; isCaptain?: boolean; isVice?: boolean; xp?: number }) {
+function PlayerToken({ player, isCaptain, isVice, xp, onPitch }: { player: Player; isCaptain?: boolean; isVice?: boolean; xp?: number; onPitch?: boolean }) {
+  const atRisk = player.status !== "available";
+  const avatar = (
+    <div
+      className={cn(
+        "w-11 h-11 rounded-full [background:var(--surface)] flex items-center justify-center shadow-sm",
+        !isCaptain && (atRisk ? "border-2 [border-color:var(--red)]" : "border-2 [border-color:var(--border)]")
+      )}
+    >
+      <ClubBadge clubId={player.clubId} size={26} />
+    </div>
+  );
+
   return (
     <div className="flex flex-col items-center gap-1 w-[84px] animate-fade-in-up">
       <div className="relative">
-        <div className="w-11 h-11 rounded-full [background:var(--surface)] border-2 [border-color:var(--border)] flex items-center justify-center shadow-sm">
-          <ClubBadge clubId={player.clubId} size={26} />
-        </div>
+        {isCaptain ? <div className="story-ring">{avatar}</div> : avatar}
         {isCaptain && (
           <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full [background:var(--amber)] text-[10px] font-bold flex items-center justify-center text-black">
             C
@@ -20,11 +30,14 @@ function PlayerToken({ player, isCaptain, isVice, xp }: { player: Player; isCapt
           </span>
         )}
       </div>
-      <div className="text-center leading-tight">
-        <div className="text-xs font-semibold truncate w-[84px]">{player.webName}</div>
-        {xp !== undefined && <div className="text-[10px] mono [color:var(--text-muted)]">{xp.toFixed(1)} xP</div>}
+      {/* On the pitch, the name/xP caption sits on grass, so it gets a small
+          white chip behind it (like an Instagram photo caption) instead of
+          relying on coloured text staying legible over green. */}
+      <div className={cn("text-center leading-tight", onPitch && "rounded-lg px-1.5 py-0.5 shadow-sm [background:var(--bg-elevated)]")}>
+        <div className="text-xs font-semibold truncate w-[76px]">{player.webName}</div>
+        {xp !== undefined && <div className="text-[10px] mono [color:var(--green)] font-medium">{xp.toFixed(1)} xP</div>}
       </div>
-      {player.status !== "available" && (
+      {atRisk && (
         <span className="text-[9px] px-1 rounded [background:var(--red-soft)] [color:var(--red)] font-medium">
           {player.status === "doubtful" ? `${player.chanceOfPlayingNextRound}%` : player.status}
         </span>
@@ -62,7 +75,7 @@ export function PitchView({
         {rows.map((row, i) => (
           <div key={i} className="flex justify-evenly flex-wrap gap-y-3 relative z-10">
             {row.map((p) => (
-              <PlayerToken key={p.id} player={p} isCaptain={p.id === captainId} isVice={p.id === viceCaptainId} xp={xpById?.get(p.id)} />
+              <PlayerToken key={p.id} player={p} isCaptain={p.id === captainId} isVice={p.id === viceCaptainId} xp={xpById?.get(p.id)} onPitch />
             ))}
           </div>
         ))}

@@ -3,6 +3,8 @@ import "./globals.css";
 import { NavBar } from "@/components/layout/NavBar";
 import { GwCountdown } from "@/components/layout/GwCountdown";
 import { getActiveTeamId } from "@/lib/session";
+import { USE_LIVE_FPL_API } from "@/lib/fpl/adapter";
+import { ensureBootstrapLoaded } from "@/lib/data/live";
 
 export const metadata: Metadata = {
   title: "Kickoff IQ — AI Fantasy Premier League Assistant",
@@ -10,6 +12,19 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // Every page reads the CLUBS/PLAYERS/FIXTURES arrays directly, so live
+  // data has to be loaded before anything under this layout renders — this
+  // is that one choke point. No-ops instantly when USE_LIVE_FPL_API is off.
+  if (USE_LIVE_FPL_API) {
+    try {
+      await ensureBootstrapLoaded();
+    } catch (err) {
+      // Falls through to whatever CLUBS/PLAYERS/FIXTURES currently hold
+      // (the mock data from module init) — getUserTeam/getRivalTeams retry
+      // and fail over independently, so this is a safe, logged no-op.
+      console.error("[live-fpl] bootstrap load failed, continuing on mock data:", err);
+    }
+  }
   const teamId = await getActiveTeamId();
   return (
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>

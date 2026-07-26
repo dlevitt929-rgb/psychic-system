@@ -73,11 +73,22 @@ function generateFixtures(): Fixture[] {
 }
 
 // Treated as "the gameweek about to be played" — GW1-8 mock-finished so the
-// dashboard has history/form to react to.
-export const CURRENT_GW = 9;
+// dashboard has history/form to react to. `let` (not `const`) so live data
+// can update it via setCurrentGw — ES module bindings are live references,
+// so every file that does `import { CURRENT_GW }` sees the new value too.
+export let CURRENT_GW = 9;
 export const TOTAL_GWS = 38;
 
+export function setCurrentGw(gw: number) {
+  CURRENT_GW = gw;
+}
+
 export const FIXTURES: Fixture[] = generateFixtures();
+
+/** Replaces the contents of FIXTURES in place with live data — see lib/data/live.ts. */
+export function replaceFixtures(live: Fixture[]) {
+  FIXTURES.splice(0, FIXTURES.length, ...live);
+}
 
 export const fixturesForGw = (gw: number) => FIXTURES.filter((f) => f.gw === gw);
 export const fixturesForClub = (clubId: number, fromGw = CURRENT_GW, toGw = TOTAL_GWS) =>

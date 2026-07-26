@@ -5,7 +5,7 @@ export function Card({ children, className, glow = false }: { children: ReactNod
   return (
     <div
       className={cn(
-        "rounded-2xl border p-5",
+        "rounded-2xl border p-5 shadow-[var(--shadow-card)]",
         "[border-color:var(--border)] [background:var(--surface)]",
         glow && "shadow-[0_0_0_1px_var(--accent-soft),0_8px_30px_-12px_var(--accent-soft)]",
         className

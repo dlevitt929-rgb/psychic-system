@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getActiveTeamId } from "@/lib/session";
-import { generateUserTeam } from "@/lib/data/userTeam";
+import { getUserTeam } from "@/lib/data/userTeam";
 import { buildTransferSuggestions, planTransfers, classifySquad } from "@/lib/engine/transfers";
 import { HORIZONS, HorizonKey } from "@/lib/prediction/xp";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -13,7 +13,7 @@ export default async function TransfersPage({ searchParams }: { searchParams: Pr
   const horizon = ((sp.h as HorizonKey) && HORIZONS[sp.h as HorizonKey] ? sp.h : "next5") as HorizonKey;
 
   const teamId = await getActiveTeamId();
-  const team = generateUserTeam(teamId);
+  const team = await getUserTeam(teamId);
   const allSuggestions = buildTransferSuggestions(team, horizon);
   const plan = planTransfers(team, horizon);
   const verdicts = classifySquad(team, horizon);
